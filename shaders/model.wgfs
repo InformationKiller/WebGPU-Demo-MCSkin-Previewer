@@ -1,0 +1,23 @@
+// GLSL-like precompiled macro
+// Not belongs to WGSL
+#uniform tex : texture_2d<f32>;
+#uniform tex_sampler : sampler;
+
+#varying v_uv : vec2f;
+#varying v_normal : vec3f;
+
+#attachment albedo : vec4f;
+#attachment normal : vec4f;
+// Macro end
+
+fn main()
+{
+    albedo = textureSample(tex, tex_sampler, v_uv);
+    if (albedo.w < 0.9)
+    {
+        discard;
+    }
+
+    albedo = vec4f(pow(albedo.rgb, vec3f(2.2)), 1.0);
+    normal = vec4f(v_normal, 0.8);
+}

@@ -1,0 +1,32 @@
+// GLSL-like precompiled macro
+// Not belongs to WGSL
+#uniform linear : texture_2d<f32>;
+#uniform linear_sampler : sampler;
+
+#varying v_uv : vec2f;
+
+#attachment output : vec4f;
+// Macro end
+
+fn aces(x : vec3f) -> vec3f
+{
+    let a = 2.51;
+    let b = 0.03;
+    let c = 2.43;
+    let d = 0.59;
+    let e = 0.14;
+    return saturate((x*(a*x+b))/(x*(c*x+d)+e));
+}
+
+fn main()
+{
+    let color = textureSample(linear, linear_sampler, v_uv);
+
+    let mapped = aces(color.rgb);
+
+    let dark = vec3f(0.05);
+    let light = vec3f(0.15);
+    let bg = mix(dark, light, (floor(v_uv.x * 50) + (floor(v_uv.y * 50) % 2.0)) % 2.0);
+
+    output = vec4f(mix(bg, pow(mapped, vec3f(1.0 / 2.2)), color.a), 1.0);
+}

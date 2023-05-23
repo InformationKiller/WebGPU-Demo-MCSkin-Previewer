@@ -1,0 +1,101 @@
+// GLSL-like precompiled macro
+// Not belongs to WGSL
+#uniform mat_gbuffer_modelview : mat4x4f;
+#uniform mat_gbuffer_modelview_inv : mat4x4f;
+#uniform mat_gbuffer_projection_inv : mat4x4f;
+#uniform mat_shadow_modelview : mat4x4f;
+#uniform mat_shadow_projection : mat4x4f;
+#uniform mat_shadow_projection_inv : mat4x4f;
+#uniform albedo : texture_2d<f32>;
+#uniform albedo_sampler : sampler;
+#uniform normal : texture_2d<f32>;
+#uniform normal_sampler : sampler;
+#uniform depthtex : texture_depth_2d; // DEPTH32F
+#uniform depthtex_sampler : sampler;
+#uniform shadowtex : texture_depth_2d; // DEPTH32F
+#uniform shadowtex_sampler : sampler;
+
+#varying v_pos : vec2f;
+#varying v_uv : vec2f;
+
+#attachment post1 : vec4f;
+// Macro end
+
+var<private> pi : f32;
+
+fn distribution_ggx(noh : f32, roughness : f32) -> f32
+{
+    let a2 = roughness * roughness * roughness * roughness;
+    let noh2 = noh * noh;
+
+    var denom = (noh2 * (a2 - 1.0) + 1.0);
+        denom = pi * denom * denom;
+    
+    return a2 / denom;
+}
+
+fn geometry_schlick_ggx(nov : f32, roughness : f32) -> f32
+{
+    let r = (roughness + 1.0);
+    let k = (r * r) / 8.0;
+
+    let num = nov;
+    let denom = nov * (1.0 - k) + k;
+
+    return num / denom;
+}
+
+fn pow5(a : f32) -> f32
+{
+    return a * a * a * a * a;
+}
+
+fn fresnel_schlick(cos_theta : f32, f0 : vec3f) -> vec3f
+{
+    return f0 + (1.0 - f0) * pow5(saturate(1.0 - cos_theta));
+}
+
+fn main()
+{
+    let color = textureSample(albedo, albedo_sampler, v_uv);
+    let pos = vec4f(v_pos, textureSample(depthtex, depthtex_sampler, v_uv), 1.0);
+    var view = mat_gbuffer_projection_inv * pos;
+        view /= view.w;
+    let world = mat_gbuffer_modelview_inv * view;
+    let shadow_view = mat_shadow_modelview * world;
+    var shadow_proj = mat_shadow_projection * shadow_view;
+        shadow_proj /= shadow_proj.w;
+    let shadow = textureSample(shadowtex, shadowtex_sampler, vec2f(0.5, -0.5) * shadow_proj.xy + 0.5);
+    var shadow_pos = mat_shadow_projection_inv * vec4f(shadow_proj.xy, shadow, 1.0);
+        shadow_pos /= shadow_pos.w;
+
+    pi = radians(180.0);
+
+    let data = textureSample(normal, normal_sampler, v_uv);
+    let roughness = 1.0 - data.w;
+    let n = data.xyz;
+    let v = -normalize(view.xyz);
+    let l = normalize((mat_gbuffer_modelview * vec4f(normalize(vec3f(1, 1, 1)), 0)).xyz);
+    let h = normalize(v + l);
+    let nol = saturate(dot(n, l));
+    let nov = saturate(dot(n, v));
+    let noh = saturate(dot(n, h));
+    let voh = saturate(dot(v, h));
+
+    let light = 4.0 * (1.0 - f32(dot(n, l) < 0 || (shadow < 1.0 && shadow_pos.z - 0.02 > shadow_view.z)));
+
+    var output = vec3f(0.0);
+
+    let ndf = distribution_ggx(noh, roughness);
+    let g = geometry_schlick_ggx(nov, roughness) * geometry_schlick_ggx(nol, roughness);
+    let f = fresnel_schlick(voh, vec3f(0.04));
+
+    let nominator = ndf * g * f;
+    let denominator = 4.0 * nov * nol + 0.001;
+    let specular = nominator / denominator;
+
+    output += ((1.0 - f) * color.rgb / pi + specular) * light * nol;
+    output += 0.05 * color.rgb;
+
+    post1 = vec4f(output, color.a);
+}

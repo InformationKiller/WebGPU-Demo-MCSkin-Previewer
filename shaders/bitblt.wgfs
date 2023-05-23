@@ -1,0 +1,14 @@
+// GLSL-like precompiled macro
+// Not belongs to WGSL
+#uniform tex : texture_2d<f32>;
+#uniform tex_sampler : sampler;
+
+#varying v_uv : vec2f;
+
+#attachment canvas : vec4f;
+// Macro end
+
+fn main()
+{
+    canvas = textureSample(tex, tex_sampler, v_uv);
+}

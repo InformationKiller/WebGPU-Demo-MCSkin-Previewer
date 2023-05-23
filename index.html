@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script type="text/javascript" src="./scripts/Web3D.js"></script>
+        <script type="text/javascript" src="./scripts/BedrockModel.js"></script>
+        <script type="text/javascript" src="./scripts/main.js"></script>
+        <style>
+            div {
+                margin: 5px 0;
+            }
+            button {
+                width: 200px;
+                height: 80px;
+                font-size: large;
+            }
+        </style>
+        <title>WebGPU Demo</title>
+    </head>
+    <body>
+        <div id="fps" style="user-select: none;">0 FPS</div>
+        <canvas id="render" width="800" height="600"></canvas>
+        <div>
+            <button id="model_steve" disabled>Steve</button>
+            <button id="model_alex">Alex</button>
+        </div>
+        <div>
+            <input id="skin" type="file" accept="image/png">
+        </div>
+    </body>
+</html>

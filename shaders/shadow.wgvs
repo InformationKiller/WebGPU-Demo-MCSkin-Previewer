@@ -1,0 +1,17 @@
+// GLSL-like precompiled macro
+// Not belongs to WGSL
+#uniform mat_modelview : mat4x4f;
+#uniform mat_projection : mat4x4f;
+
+#attribute vertex : vec3f;
+#attribute uv : vec2f;
+
+#builtin out_position : vec4f;
+#varying v_uv : vec2f;
+// Macro end
+
+fn main()
+{
+    out_position = mat_projection * mat_modelview * vec4f(vertex, 1.0);
+    v_uv = uv;
+}

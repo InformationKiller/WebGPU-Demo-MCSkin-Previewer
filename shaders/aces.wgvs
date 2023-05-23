@@ -1,0 +1,13 @@
+// GLSL-like precompiled macro
+// Not belongs to WGSL
+#attribute vertex : vec2f;
+
+#builtin out_position : vec4f;
+#varying v_uv : vec2f;
+// Macro end
+
+fn main()
+{
+    out_position = vec4f(vertex, 0.0, 1.0);
+    v_uv = vec2f(1.0, -1.0) * vertex * 0.5 + 0.5;
+}
