@@ -53,10 +53,15 @@ window.onload = async function() {
 
     // Vertex Buffers
     fps.innerText = '正在加载模型文件……';
-    let alexModel = BedrockModel.parseModel(await (await fetch('./models/alex.geo.json')).json());
-    let steveModel = BedrockModel.parseModel(await (await fetch('./models/steve.geo.json')).json());
+    let alexModel = null;
+    let steveModel = null;
     let groundModel = new Web3D.VertexBuffer();
     let screenModel = new Web3D.VertexBuffer();
+
+    await Promise.all([
+        fetch('./models/alex.geo.json').then(resp => resp.json()).then(json => {alexModel = BedrockModel.parseModel(json)}),
+        fetch('./models/steve.geo.json').then(resp => resp.json()).then(json => {steveModel = BedrockModel.parseModel(json)})
+    ]);
 
     for (let part in alexModel) {
         let vbo = new Web3D.VertexBuffer();
@@ -96,9 +101,11 @@ window.onload = async function() {
     let groundTex = new Web3D.Texture();
 
     fps.innerText = '正在加载纹理文件……';
-    alexTex.fromBitmap(await createImageBitmap(await (await fetch('./images/alex.png')).blob()));
-    steveTex.fromBitmap(await createImageBitmap(await (await fetch('./images/steve.png')).blob()));
-    groundTex.fromBitmap(await createImageBitmap(await (await fetch('./images/ground.png')).blob()));
+    await Promise.all([
+        fetch('./images/alex.png').then(resp => resp.blob()).then(blob => createImageBitmap(blob)).then(bitmap => alexTex.fromBitmap(bitmap)),
+        fetch('./images/steve.png').then(resp => resp.blob()).then(blob => createImageBitmap(blob)).then(bitmap => steveTex.fromBitmap(bitmap)),
+        fetch('./images/ground.png').then(resp => resp.blob()).then(blob => createImageBitmap(blob)).then(bitmap => groundTex.fromBitmap(bitmap))
+    ]);
 
     // Transform
     let modelView = new Web3D.MatrixStack();
@@ -202,13 +209,22 @@ window.onload = async function() {
     let uniformShadowProjectionInv = new Web3D.UniformBuffer(projection);
 
     // Pipelines
-    fps.innerText = '正在初始化渲染管线……';
-    let gbufferModelPipeline = await new Web3D.PipelineBuilder(gbufferPass, modelFormat, 'model').build();
-    let gbufferGroundPipeline = await new Web3D.PipelineBuilder(gbufferPass, groundFormat, 'ground').cullMode(Web3D.PipelineBuilder.CullMode.BACK).build();
-    let shadowModelPipeline = await new Web3D.PipelineBuilder(shadowPass, modelFormat, 'shadow').build();
-    let lightingPipeline = await new Web3D.PipelineBuilder(gbufferPass, screenFormat, 'lighting').depth(false).build();
-    let acesPipeline = await new Web3D.PipelineBuilder(gbufferPass, screenFormat, 'aces').depth(false).build();
-    let bitbltPipeline = await new Web3D.PipelineBuilder(bitbltPass, screenFormat, 'bitblt').depth(false).build();
+    fps.innerText = '正在加载着色器……';
+    let gbufferModelPipeline = null;
+    let gbufferGroundPipeline = null;
+    let shadowModelPipeline = null;
+    let lightingPipeline = null;
+    let acesPipeline = null;
+    let bitbltPipeline = null;
+
+    await Promise.all([
+        new Web3D.PipelineBuilder(gbufferPass, modelFormat, 'model').build().then(pipeline => {gbufferModelPipeline = pipeline}),
+        new Web3D.PipelineBuilder(gbufferPass, groundFormat, 'ground').cullMode(Web3D.PipelineBuilder.CullMode.BACK).build().then(pipeline => {gbufferGroundPipeline = pipeline}),
+        new Web3D.PipelineBuilder(shadowPass, modelFormat, 'shadow').build().then(pipeline => {shadowModelPipeline = pipeline}),
+        new Web3D.PipelineBuilder(gbufferPass, screenFormat, 'lighting').depth(false).build().then(pipeline => {lightingPipeline = pipeline}),
+        new Web3D.PipelineBuilder(gbufferPass, screenFormat, 'aces').depth(false).build().then(pipeline => {acesPipeline = pipeline}),
+        new Web3D.PipelineBuilder(bitbltPass, screenFormat, 'bitblt').depth(false).build().then(pipeline => {bitbltPipeline = pipeline})
+    ]);
 
     gbufferModelPipeline.bindUniform('mat_modelview', uniformModelView);
     gbufferModelPipeline.bindUniform('mat_projection', uniformProjection);

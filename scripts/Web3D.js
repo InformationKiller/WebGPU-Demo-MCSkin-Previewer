@@ -283,8 +283,13 @@
             return;
         }
 
-        let vsh = await (await fetch('./shaders/' + name + '.wgvs')).text();
-        let fsh = await fetch('./shaders/' + name + '.wgfs');
+        let vsh = null;
+        let fsh = null;
+
+        await Promise.all([
+            fetch('./shaders/' + name + '.wgvs').then(resp => resp.text()).then(text => {vsh = text}),
+            fetch('./shaders/' + name + '.wgfs').then(resp => {fsh = resp})
+        ])
 
         if (fsh.ok) {
             fsh = await fsh.text();
